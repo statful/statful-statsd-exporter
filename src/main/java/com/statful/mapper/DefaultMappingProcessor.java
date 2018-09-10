@@ -19,6 +19,7 @@ public class DefaultMappingProcessor implements MappingProcessor<DefaultEvent> {
     public DefaultEvent process(DefaultEvent e) {
         return mappings
                 .stream()
+                .filter(m -> Mapping.Action.MATCH.equals(m.getAction()))
                 .filter(m -> this.matches(e.getMetricName(), m.getMatch()))
                 .findFirst()
                 .map(m -> DefaultEvent.builder(m.getName())

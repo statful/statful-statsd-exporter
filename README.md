@@ -99,6 +99,8 @@ An example configuration file
         tags:
           upstream: "$3"
           status_code: "$5"
+      - match: "*"
+        action: DROP
     statful:
       flushInterval: 5000
       flushSize: 10
@@ -109,9 +111,11 @@ An example configuration file
       namespace: statsdexporter
       environment: local
 
-Mappings match incoming metrics. They are applied sequentially and stop when a match is found.
-Match can be viewed as a regex that will be applied to an incoming metric, where wildcard `*` is replaced by `[a-zA-Z_]+`  
+Mappings match incoming metrics and are applied sequentially, stopping when a match is found. If no match is found, the metric is sent as is.
+A Match can be viewed as a regex that will be applied to an incoming metric, where wildcard `*` is replaced by `[a-zA-Z_]+`  
 When a match occurs, the metric will then be split by `.` and $X will get the value associated with the according position.
+
+Mappings have two actions available: DROP or MATCH. The default is MATCH.
 
 e.g: 
 

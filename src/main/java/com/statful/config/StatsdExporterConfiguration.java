@@ -43,9 +43,13 @@ public class StatsdExporterConfiguration {
 
         statsdExporterConfiguration.getMappingsList()
                 .forEach(m -> {
-                    Objects.requireNonNull(m.getMatch());
-                    Objects.requireNonNull(m.getName());
                     m.setAction(Optional.ofNullable(m.getAction()).orElse(Mapping.Action.MATCH));
+
+                    if (Mapping.Action.MATCH.equals(m.getAction())) {
+                        Objects.requireNonNull(m.getName());
+                    }
+
+                    Objects.requireNonNull(m.getMatch());
                 });
 
         return statsdExporterConfiguration;
