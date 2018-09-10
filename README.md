@@ -99,7 +99,9 @@ An example configuration file
         tags:
           upstream: "$3"
           status_code: "$5"
-      - match: "*"
+      - match: "*.*.*.*"
+        action: DROP
+      - match: "*.*.*.*.*"
         action: DROP
     statful:
       flushInterval: 5000
