@@ -24,41 +24,47 @@ public class StatfulSender implements MetricsSender<DefaultEvent> {
 
     //TODO: Change this method to perhaps use an async udp sender. Udp send will only block if socket buffer is full
     public Mono<Void> send(Iterable<DefaultEvent> events) {
-        return Mono.create(sink -> events.forEach(event -> {
-            switch (event.getType()) {
-                case COUNTER:
-                    statfulClient.sampledCounter(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
-                            .with()
-                            .tags(toTags(event.getTags()))
-                            .send();
-                    break;
-                case GAUGE:
-                    statfulClient.sampledGauge(event.getMetricName(), Math.round((double) event.getValue()), Math.round(event.getSampleRate() * 100))
-                            .with()
-                            .tags(toTags(event.getTags()))
-                            .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
-                            .send();
-                    break;
-                case TIMER:
-                    statfulClient.sampledTimer(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
-                            .with()
-                            .tags(toTags(event.getTags()))
-                            .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
-                            .send();
-                    break;
-                case HISTOGRAM:
-                    statfulClient.sampledTimer(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
-                            .with()
-                            .tags(toTags(event.getTags()))
-                            .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
-                            .send();
-                    break;
-                default:
-                    LOGGER.warn("Unknown metric type");
+        return Mono.create(sink -> {
+            try {
+                events.forEach(event -> {
+                    switch (event.getType()) {
+                        case COUNTER:
+                            statfulClient.sampledCounter(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
+                                    .with()
+                                    .tags(toTags(event.getTags()))
+                                    .send();
+                            break;
+                        case GAUGE:
+                            statfulClient.sampledGauge(event.getMetricName(), Math.round((double) event.getValue()), Math.round(event.getSampleRate() * 100))
+                                    .with()
+                                    .tags(toTags(event.getTags()))
+                                    .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
+                                    .send();
+                            break;
+                        case TIMER:
+                            statfulClient.sampledTimer(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
+                                    .with()
+                                    .tags(toTags(event.getTags()))
+                                    .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
+                                    .send();
+                            break;
+                        case HISTOGRAM:
+                            statfulClient.sampledTimer(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
+                                    .with()
+                                    .tags(toTags(event.getTags()))
+                                    .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
+                                    .send();
+                            break;
+                        default:
+                            LOGGER.warn("Unknown metric type");
+                    }
+                    LOGGER.debug("Sent metric to statful. {}", event);
+                });
+            } catch (Exception e) {
+                sink.error(e);
             }
-            LOGGER.debug("Sent metric to statful. {}", event);
             sink.success();
-        }));
+        });
     }
 
     private Tags toTags(Map<String, String> tags) {
