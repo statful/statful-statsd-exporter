@@ -22,12 +22,17 @@ public class DefaultMappingProcessor implements MappingProcessor<DefaultEvent> {
                 .filter(m -> Mapping.Action.MATCH.equals(m.getAction()))
                 .filter(m -> this.matches(e.getMetricName(), m.getMatch()))
                 .findFirst()
-                .map(m -> DefaultEvent.builder(m.getName())
-                        .type(e.getType())
-                        .sampleRate(e.getSampleRate())
-                        .value(e.getValue())
-                        .tags(tags(e.getMetricName(), m))
-                        .build())
+                .map(m -> {
+                    Map<String, String> derivedMetrics = tags(e.getMetricName(), m);
+                    derivedMetrics.putAll(e.getTags());
+
+                    return DefaultEvent.builder(m.getName())
+                            .type(e.getType())
+                            .sampleRate(e.getSampleRate())
+                            .value(e.getValue())
+                            .tags(derivedMetrics)
+                            .build();
+                })
                 .orElse(e);
     }
 
