@@ -107,7 +107,7 @@ public class DefaultMappingProcessor implements MappingProcessor<DefaultEvent> {
         return Pattern.compile(
                 globedMatch
                         .replace(".", "\\.")
-                        .replace("*", "[a-zA-Z_]+")
+                        .replace("*", "[a-zA-Z0-9_-]+")
         ).matcher(metric).matches();
     }
 }
