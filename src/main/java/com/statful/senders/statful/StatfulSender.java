@@ -42,12 +42,6 @@ public class StatfulSender implements MetricsSender<DefaultEvent> {
                                     .send();
                             break;
                         case TIMER:
-                            statfulClient.sampledTimer(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
-                                    .with()
-                                    .tags(toTags(event.getTags()))
-                                    .aggregations(Aggregation.AVG, Aggregation.P90, Aggregation.P95, Aggregation.MAX, Aggregation.SUM, Aggregation.COUNT)
-                                    .send();
-                            break;
                         case HISTOGRAM:
                             statfulClient.sampledTimer(event.getMetricName(), Math.round(event.getValue()), Math.round(event.getSampleRate() * 100))
                                     .with()

@@ -34,6 +34,8 @@ public class StatsdExporterConfiguration {
     private StatfulConfiguration statfulConfiguration;
     @JsonProperty
     private String environment;
+    @JsonProperty
+    private boolean selfMetrics;
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 

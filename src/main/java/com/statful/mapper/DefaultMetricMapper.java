@@ -1,5 +1,6 @@
 package com.statful.mapper;
 
+import com.statful.client.domain.api.StatfulClient;
 import com.statful.domain.DefaultEvent;
 import com.statful.domain.MetricType;
 import com.statful.exceptions.InvalidStatsDLineException;
@@ -21,16 +22,16 @@ public class DefaultMetricMapper implements MetricMapper<DefaultEvent> {
     private static final Logger LOGGER = Loggers.getLogger(DefaultMetricMapper.class);
     private static final Pattern ILLEGAL_CHARACTERS = Pattern.compile("[^a-zA-Z0-9_.]");
     private static final Pattern BEGINS_WITH_DIGITS = Pattern.compile("^[0-9]");
-    private static final String GAUGE_METRIC_TYPE = MetricType.GAUGE.getType();
-    private static final String COUNTER_METRIC_TYPE = MetricType.COUNTER.getType();
-
-    private static final float DEFAULT_SAMPLE_RATE = 1f;
-    private static final String METADATA_ERRORS = "metadata_errors";
 
     private MappingProcessor<DefaultEvent> mappingProcessor;
+    private StatfulClient statfulClient;
 
     public DefaultMetricMapper(MappingProcessor<DefaultEvent> mappingProcessor) {
         this.mappingProcessor = mappingProcessor;
+    }
+
+    public void setStatfulClient(StatfulClient statfulClient) {
+        this.statfulClient = statfulClient;
     }
 
     @Override
@@ -50,9 +51,12 @@ public class DefaultMetricMapper implements MetricMapper<DefaultEvent> {
 
         } catch (Exception e) {
             LOGGER.error(String.format("Error processing metric lines: %s", metricLines), e);
-            return Collections.singletonList(this.buildEvent(COUNTER_METRIC_TYPE, "batch_error",
-                    1, DEFAULT_SAMPLE_RATE, null));
+            if (statfulClient != null) {
+                statfulClient.counter("batch_error", 1).send();
+            }
         }
+
+        return Collections.EMPTY_LIST;
     }
 
     /**
@@ -86,11 +90,10 @@ public class DefaultMetricMapper implements MetricMapper<DefaultEvent> {
             try {
                 value = Float.parseFloat(valueStr);
             } catch (NumberFormatException e) {
-
-                events.add(this.buildEvent(GAUGE_METRIC_TYPE, METADATA_ERRORS, 1f, DEFAULT_SAMPLE_RATE,
-                        ImmutableMap.of("malformed_value", "malformed_value")));
-
                 LOGGER.debug(String.format("Bad value %s on line: %s", valueStr, line));
+                if (statfulClient != null) {
+                    statfulClient.gauge("metadata_errors", 1).with().tag("malformed_value", "malformed_value").send();
+                }
             }
 
             //case where there's sampling and/or statsdDog values
@@ -100,10 +103,9 @@ public class DefaultMetricMapper implements MetricMapper<DefaultEvent> {
                         .filter(c -> {
                             if (c.length() == 0) {
                                 LOGGER.debug("Empty metadata component on line: {}", line);
-
-                                events.add(this.buildEvent(GAUGE_METRIC_TYPE, METADATA_ERRORS,
-                                        1f, DEFAULT_SAMPLE_RATE,
-                                        ImmutableMap.of("malformed_metadata", "malformed_metadata")));
+                                if (statfulClient != null) {
+                                    statfulClient.gauge("metadata_errors", 1).with().tag("malformed_value", "malformed_value").send();
+                                }
 
                                 return false;
                             }
@@ -115,23 +117,19 @@ public class DefaultMetricMapper implements MetricMapper<DefaultEvent> {
                     switch (component.charAt(0)) {
                         case '@':
                             if (Arrays.stream(MetricType.values()).noneMatch(mt -> mt.getType().equals(statType))) { //for now we only support timers and counter
-
-                                events.add(this.buildEvent(GAUGE_METRIC_TYPE, METADATA_ERRORS,
-                                        1f, DEFAULT_SAMPLE_RATE,
-                                        ImmutableMap.of("illegal_metric_type", "illegal_metric_type")));
-
                                 LOGGER.debug(String.format("Illegal metric type on line: %s", line));
+                                if (statfulClient != null) {
+                                    statfulClient.gauge("metadata_errors", 1).with().tag("illegal_metric_type", "illegal_metric_type").send();
+                                }
                             }
 
                             try {
                                 samplingFactor = Float.parseFloat((component.substring(1, component.length())));
                             } catch (Exception e) {
-
-                                events.add(this.buildEvent(GAUGE_METRIC_TYPE, METADATA_ERRORS,
-                                        1f, DEFAULT_SAMPLE_RATE,
-                                        ImmutableMap.of("invalid_sample_factor", "invalid_sample_factor")));
-
                                 LOGGER.debug(String.format("Invalid sampling factor %s on line: %s", component, line), e);
+                                if (statfulClient != null) {
+                                    statfulClient.gauge("metadata_errors", 1).with().tag("invalid_sample_factor", "invalid_sample_factor").send();
+                                }
                             }
 
                             break;
@@ -139,33 +137,30 @@ public class DefaultMetricMapper implements MetricMapper<DefaultEvent> {
                             tags.putAll(this.parseDogStatsDTags(component));
                             break;
                         default:
-
-                            events.add(this.buildEvent(GAUGE_METRIC_TYPE, METADATA_ERRORS,
-                                    1f, DEFAULT_SAMPLE_RATE,
-                                    ImmutableMap.of("unknown_metadata_component_type", "unknown_metadata_component_type")));
-
                             LOGGER.debug("Invalid sampling factor or tag section {} on line {}", components[2], line);
+                            if (statfulClient != null) {
+                                statfulClient.gauge("metadata_errors", 1).with().tag("unknown_metadata_component_type", "unknown_metadata_component_type").send();
+                            }
                     }
                 }
             }
 
             try {
                 events.add(buildEvent(statType, metric, value, samplingFactor, tags));
-                events.add(this.buildEvent(GAUGE_METRIC_TYPE, "valid_lines",
-                        1f, DEFAULT_SAMPLE_RATE, null));
+                if (statfulClient != null) {
+                    statfulClient.gauge("valid_lines", 1).send();
+                }
             } catch (Exception e) {
-
-                events.add(this.buildEvent(GAUGE_METRIC_TYPE, METADATA_ERRORS,
-                        1f, DEFAULT_SAMPLE_RATE, ImmutableMap.of("illegal_event", "illegal_event")));
-
                 LOGGER.debug("Error building event on line: {}", line);
+                if (statfulClient != null) {
+                    statfulClient.gauge("metadata_errors", 1).with().tag("illegal_event", "illegal_event").send();
+                }
             }
         } catch (Exception e) {
-
             LOGGER.error(String.format("Error building event on line: %s", line), e);
-
-            events.add(this.buildEvent(GAUGE_METRIC_TYPE, "invalid_lines",
-                    1f, DEFAULT_SAMPLE_RATE, ImmutableMap.of("exception", e.getClass().getName())));
+            if (statfulClient != null) {
+                statfulClient.gauge("invalid_lines", 1).with().tag("exception", e.getClass().getName()).send();
+            }
         }
 
         return events;

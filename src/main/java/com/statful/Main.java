@@ -31,6 +31,9 @@ public class Main {
         final StatfulClient statfulClient = appConfig.getStatfulClient();
         final DefaultMappingProcessor mappingProcessor = new DefaultMappingProcessor(appConfig.getMappingsList());
         final DefaultMetricMapper metricMapper = new DefaultMetricMapper(mappingProcessor);
+        if (appConfig.isSelfMetrics()) {
+            metricMapper.setStatfulClient(statfulClient);
+        }
         final StatfulSender statfulSender = new StatfulSender(statfulClient);
 
         Thread tcp = new Thread(() -> TcpServer.start(appConfig.getTcpConfiguration(), metricMapper, statfulSender));
