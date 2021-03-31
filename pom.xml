@@ -15,7 +15,7 @@
         <statful.version>2.1.0</statful.version>
         <json.version>20180130</json.version>
         <lombok.version>1.18.0</lombok.version>
-        <guava.version>25.1-jre</guava.version>
+        <guava.version>29.0-jre</guava.version>
         <junit.version>5.1.0</junit.version>
         <logback.version>1.2.3</logback.version>
     </properties>
