@@ -11,7 +11,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <jackson.version>2.10.0.pr1</jackson.version>
+        <jackson.version>2.12.6.1</jackson.version>
         <statful.version>2.1.0</statful.version>
         <json.version>20180130</json.version>
         <lombok.version>1.18.0</lombok.version>
